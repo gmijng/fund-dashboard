@@ -565,7 +565,7 @@ document.getElementById('fund-tbody').addEventListener('change', (e) => {
   }
   if (e.target.classList.contains('gain-edit')) {
     const newGain = parseFloat(e.target.value) || 0;
-    if (newGain >= 0 && f.shares > 0) {
+    if (f.shares > 0) {
       const amtEl = e.target.closest('tr').querySelector('.amt-edit');
       const amt = parseFloat(amtEl.value) || 0;
       if (amt > 0) f.cost = (amt - newGain) / f.shares;
