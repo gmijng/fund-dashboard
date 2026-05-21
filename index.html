@@ -547,34 +547,26 @@ document.getElementById('modal-confirm').addEventListener('click', async () => {
   setStatus('添加成功：' + d.name);
 });
 
-document.getElementById('fund-tbody').addEventListener('change', (e) => {
+document.getElementById('fund-tbody').addEventListener('blur', (e) => {
+  if (!e.target.classList.contains('amt-edit') && !e.target.classList.contains('gain-edit')) return;
   const code = e.target.dataset.code;
   const f = funds.find(f => f.code === code);
   if (!f) return;
 
-  if (e.target.classList.contains('amt-edit')) {
-    const newAmt = parseFloat(e.target.value) || 0;
-    if (newAmt > 0 && f.shares > 0) {
-      const gainEl = e.target.closest('tr').querySelector('.gain-edit');
-      const currentGain = parseFloat(gainEl.value) || 0;
-      f.cost = (newAmt - currentGain) / f.shares;
-    }
+  if (f.shares <= 0) return;
+
+  const amtEl = e.target.closest('tr').querySelector('.amt-edit');
+  const gainEl = e.target.closest('tr').querySelector('.gain-edit');
+  const amt = parseFloat(amtEl.value) || 0;
+  const gain = parseFloat(gainEl.value) || 0;
+
+  if (amt > 0) {
+    f.cost = (amt - gain) / f.shares;
     saveFunds();
     renderTable();
     renderOverview();
   }
-  if (e.target.classList.contains('gain-edit')) {
-    const newGain = parseFloat(e.target.value) || 0;
-    if (f.shares > 0) {
-      const amtEl = e.target.closest('tr').querySelector('.amt-edit');
-      const amt = parseFloat(amtEl.value) || 0;
-      if (amt > 0) f.cost = (amt - newGain) / f.shares;
-    }
-    saveFunds();
-    renderTable();
-    renderOverview();
-  }
-});
+}, true);
 
 document.getElementById('fund-tbody').addEventListener('click', (e) => {
   if (e.target.classList.contains('del-btn')) {
