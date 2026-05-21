@@ -352,37 +352,39 @@ async function fetchIndex() {
   try {
     const codes = Object.values(INDEX_MAP).map(v => v.tencentCode).join(',');
     const resp = await fetch(`https://qt.gtimg.cn/q=${codes}`);
-    if (!resp.ok) return;
+    if (!resp.ok) { console.warn('fetchIndex resp not ok', resp.status); return; }
     const text = await resp.text();
+    const lineCount = (text.match(/\n/g) || []).length;
+    console.log('fetchIndex got', lineCount, 'lines, first 100:', text.substring(0, 100));
 
     const lines = text.split('\n');
+    let parsed = 0;
     for (const line of lines) {
       const m = line.match(/v_(\w+)="([^"]+)"/);
       if (!m) continue;
       const code = m[1];
       const parts = m[2].split('~');
-      if (parts.length < 10) continue;
+      if (parts.length < 33) continue;
 
       // Find mapping entry
-      let found = null;
-      for (const [idxCode, info] of Object.entries(INDEX_MAP)) {
-        if (info.tencentCode === code) { found = [idxCode, info]; break; }
+      let foundEntry = null;
+      for (const entry of Object.entries(INDEX_MAP)) {
+        const [idxCode, info] = entry;
+        if (info.tencentCode === code) { foundEntry = idxCode; break; }
       }
-      if (!found) continue;
+      if (!foundEntry) continue;
 
-      const [, idxCode] = found;
-      const name = parts[1];
       const curr = parseFloat(parts[3]);
-      const prev = parseFloat(parts[4]);
-      const pctStr = parts[32] || '0';
-      const pct = parseFloat(pctStr);
+      const pct = parseFloat(parts[32] || '0');
 
-      indexData[idxCode] = {
-        name: name || INDEX_MAP[idxCode].name,
+      indexData[foundEntry] = {
+        name: INDEX_MAP[foundEntry].name,
         price: curr.toFixed(2),
         pct: pct
       };
+      parsed++;
     }
+    console.log('fetchIndex parsed', parsed, 'indices');
   } catch(e) {
     console.warn('fetch index error', e);
   }
