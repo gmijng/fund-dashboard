@@ -603,15 +603,18 @@ document.getElementById('sort-by').addEventListener('change', (e) => {
 // Init
 loadFunds();
 if (funds.length === 0) {
-  fetch('/api/seed')
+  fetch('./funds_seed.json')
     .then(r => r.json())
     .then(data => {
-      funds = data.funds.map(f => ({ code: f.code, name: f.name, shares: f.shares, cost: f.cost }));
-      marketData = data.marketData;
+      funds = data.map(f => ({ code: f.code, name: f.name, shares: f.shares, cost: f.cost }));
+      marketData = {};
+      for (const f of data) {
+        marketData[f.code] = { name: f.name, gsz: f.gsz, gszzl: f.gszzl, dwjz: f.dwjz };
+      }
       saveFunds();
       renderTable();
       renderOverview();
-      setStatus('已自动导入基金（数据基于昨日净值）');
+      setStatus('已自动导入' + funds.length + '只基金（数据基于昨日净值）');
     })
     .catch(() => {
       renderTable();
@@ -631,10 +634,13 @@ document.getElementById('btn-import').addEventListener('click', async () => {
   if (funds.length > 0 && !confirm('将替换现有数据，是否继续？')) return;
   setStatus('正在获取基金数据…');
   try {
-    const resp = await fetch('/api/seed');
+    const resp = await fetch('./funds_seed.json');
     const data = await resp.json();
-    funds = data.funds.map(f => ({ code: f.code, name: f.name, shares: f.shares, cost: f.cost }));
-    marketData = data.marketData;
+    funds = data.map(f => ({ code: f.code, name: f.name, shares: f.shares, cost: f.cost }));
+    marketData = {};
+    for (const f of data) {
+      marketData[f.code] = { name: f.name, gsz: f.gsz, gszzl: f.gszzl, dwjz: f.dwjz };
+    }
     saveFunds();
     renderTable();
     renderOverview();
