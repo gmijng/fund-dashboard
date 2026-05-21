@@ -338,41 +338,50 @@ async function fetchFundGJ(code) {
   }
 }
 
-// Fetch index data via eastmoney push2 API (has CORS)
+// Fetch index data via Tencent finance API (has CORS)
 const INDEX_MAP = {
-  'sh000001': { el: 'idx-sh', name: '上证', emSecid: '1.000001' },
-  'sz399001': { el: 'idx-sz', name: '深证', emSecid: '0.399001' },
-  'sz399006': { el: 'idx-cy', name: '创业板', emSecid: '0.399006' },
-  'sh000688': { el: 'idx-kc', name: '科创50', emSecid: '1.000688' },
-  'hkHSI':    { el: 'idx-hk', name: '恒生', emSecid: '116.HKHSI' },
-  'hkHSTECH': { el: 'idx-hktech', name: '恒生科技', emSecid: '116.HKSTECH' }
+  'sh000001': { el: 'idx-sh', name: '上证', tencentCode: 'sh000001' },
+  'sz399001': { el: 'idx-sz', name: '深证', tencentCode: 'sz399001' },
+  'sz399006': { el: 'idx-cy', name: '创业板', tencentCode: 'sz399006' },
+  'sh000688': { el: 'idx-kc', name: '科创50', tencentCode: 'sh000688' },
+  'hkHSI':    { el: 'idx-hk', name: '恒生', tencentCode: 'hkHSI' },
+  'hkHSTECH': { el: 'idx-hktech', name: '恒生科技', tencentCode: 'hkHSTECH' }
 };
 
 async function fetchIndex() {
   try {
-    const emSecids = Object.values(INDEX_MAP).map(v => v.emSecid).join(',');
-    const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${emSecids}&fields=f14,f57,f43,f107,f169,f170&ut=b2884a393a59ad64002292a3e90d46a3`;
-    const resp = await fetch(url);
+    const codes = Object.values(INDEX_MAP).map(v => v.tencentCode).join(',');
+    const resp = await fetch(`https://qt.gtimg.cn/q=${codes}`);
     if (!resp.ok) return;
-    const json = await resp.json();
-    const data = json.data;
-    if (!data) return;
+    const text = await resp.text();
 
-    // data can be object or array depending on count
-    const items = Array.isArray(data) ? data : [data];
-    for (const item of items) {
-      if (!item || !item.f57) continue;
-      // Find which index this belongs to
-      for (const [code, info] of Object.entries(INDEX_MAP)) {
-        if (item.f57.replace(/^0+/, '') === info.emSecid.split('.')[1].replace(/^0+/, '')) {
-          indexData[code] = {
-            name: item.f14 || info.name,
-            price: (item.f43 / 100).toFixed(2),
-            pct: item.f107 > 0 ? '+' + (item.f169 / 100).toFixed(2) : (item.f169 / 100).toFixed(2)
-          };
-          break;
-        }
+    const lines = text.split('\n');
+    for (const line of lines) {
+      const m = line.match(/v_(\w+)="([^"]+)"/);
+      if (!m) continue;
+      const code = m[1];
+      const parts = m[2].split('~');
+      if (parts.length < 10) continue;
+
+      // Find mapping entry
+      let found = null;
+      for (const [idxCode, info] of Object.entries(INDEX_MAP)) {
+        if (info.tencentCode === code) { found = [idxCode, info]; break; }
       }
+      if (!found) continue;
+
+      const [, idxCode] = found;
+      const name = parts[1];
+      const curr = parseFloat(parts[3]);
+      const prev = parseFloat(parts[4]);
+      const pctStr = parts[32] || '0';
+      const pct = parseFloat(pctStr);
+
+      indexData[idxCode] = {
+        name: name || INDEX_MAP[idxCode].name,
+        price: curr.toFixed(2),
+        pct: pct
+      };
     }
   } catch(e) {
     console.warn('fetch index error', e);
