@@ -739,10 +739,11 @@ document.getElementById('fund-tbody').addEventListener('blur', (e) => {
   const f = funds.find(f => f.code === code);
   if (!f) return;
 
-  const amtEl = e.target.classList.contains('amt-edit') ? e.target : e.target.closest('tr').querySelector('.amt-edit');
-  const gainEl = e.target.classList.contains('gain-edit') ? e.target : e.target.closest('tr').querySelector('.gain-edit');
-  const newAmt = parseFloat(amtEl.value) || 0;
-  const newGain = parseFloat(gainEl.value) || 0;
+  const row = e.target.closest('tr');
+  const amtInput = row.querySelector('.amt-edit');
+  const gainInput = row.querySelector('.gain-edit');
+  const newAmt = parseFloat(amtInput.value) || 0;
+  const newGain = parseFloat(gainInput.value) || 0;
 
   if (newAmt > 0) {
     f.amount = newAmt;
